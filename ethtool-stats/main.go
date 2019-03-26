@@ -1,9 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
@@ -11,6 +11,22 @@ import (
 )
 
 func main() {
+	netdev := flag.String("ifname", "", "net device to monitor")
+	verbose := flag.Bool("v", false, "detailed output")
+	usage := flag.Bool("h", false, "usage information")
+
+	flag.Parse()
+
+	if *netdev == "" || *usage {
+		fmt.Printf("-ifname is required\n")
+		*usage = true
+	}
+
+	if *usage {
+		flag.PrintDefaults()
+		return
+	}
+
 	ethHandle, err := ethtool.NewEthtool()
 	if err != nil {
 		panic(err.Error())
@@ -31,24 +47,25 @@ func main() {
 
 	// prefix every metric with the app name
 	c.Namespace = "ethtool.stats."
-	netdev := os.Args[1]
-	c.Tags = append(c.Tags, fmt.Sprintf("netdev:%s", netdev))
+	c.Tags = append(c.Tags, fmt.Sprintf("netdev:%s", *netdev))
 
 	ticker := time.NewTicker(time.Second)
 
-	prev, err := ethHandle.Stats(netdev)
+	prev, err := ethHandle.Stats(*netdev)
 	if err != nil {
 		panic(err.Error())
 	}
 
 	for range ticker.C {
-		stats, err := ethHandle.Stats(netdev)
+		stats, err := ethHandle.Stats(*netdev)
 		if err != nil {
 			panic(err.Error())
 		}
 
 		for _, stat_name := range stat_names {
-			fmt.Printf("%s: %d\n", stat_name, stats[stat_name]-prev[stat_name])
+			if *verbose {
+				fmt.Printf("%s: %d\n", stat_name, stats[stat_name]-prev[stat_name])
+			}
 			if stats[stat_name] == 0 {
 				panic("zero")
 			}
