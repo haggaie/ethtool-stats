@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/safchain/ethtool"
@@ -33,13 +34,27 @@ func main() {
 	netdev := os.Args[1]
 	c.Tags = append(c.Tags, fmt.Sprintf("netdev:%s", netdev))
 
-	stats, err := ethHandle.Stats(netdev)
+	ticker := time.NewTicker(time.Second)
+
+	prev, err := ethHandle.Stats(netdev)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	for _, stat_name := range stat_names {
-		fmt.Printf("%s: %d\n", stat_name, stats[stat_name])
-		err = c.Count(stat_name, int64(stats[stat_name]), nil, 1)
+	for range ticker.C {
+		stats, err := ethHandle.Stats(netdev)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		for _, stat_name := range stat_names {
+			fmt.Printf("%s: %d\n", stat_name, stats[stat_name]-prev[stat_name])
+			if stats[stat_name] == 0 {
+				panic("zero")
+			}
+			err = c.Count(stat_name, int64(stats[stat_name])-int64(prev[stat_name]), nil, 1)
+		}
+
+		prev = stats
 	}
 }
