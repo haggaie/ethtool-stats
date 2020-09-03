@@ -4,11 +4,23 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/safchain/ethtool"
 )
+
+type statsList []string
+
+func (i *statsList) String() string {
+    return strings.Join(*i, ", ")
+}
+
+func (i *statsList) Set(value string) error {
+    *i = append(*i, value)
+    return nil
+}
 
 func main() {
 	netdev := flag.String("ifname", "", "net device to monitor")
@@ -16,6 +28,9 @@ func main() {
 	verbose := flag.Bool("v", false, "detailed output")
 	enable_statsd := flag.Bool("statsd", false, "enable statsd reporting")
 	usage := flag.Bool("h", false, "usage information")
+
+	var stat_names statsList
+        flag.Var(&stat_names, "stat", "ethtool stat name to measure")
 
 	flag.Parse()
 
@@ -28,6 +43,15 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
+
+        if len(stat_names) == 0 {
+		stat_names = []string{
+			"rx_vport_unicast_packets",
+			"rx_vport_unicast_bytes",
+			"tx_vport_unicast_packets",
+			"tx_vport_unicast_bytes",
+		}
+        }
 
 	ethHandle, err := ethtool.NewEthtool()
 	if err != nil {
@@ -45,13 +69,6 @@ func main() {
 		// prefix every metric with the app name
 		c.Namespace = "ethtool.stats."
 		c.Tags = append(c.Tags, fmt.Sprintf("netdev:%s", *netdev))
-	}
-
-	stat_names := []string{
-		"rx_vport_unicast_packets",
-		"rx_vport_unicast_bytes",
-		"tx_vport_unicast_packets",
-		"tx_vport_unicast_bytes",
 	}
 
 	ticker := time.NewTicker(time.Duration(*interval * 1e9) * time.Nanosecond)
