@@ -12,6 +12,7 @@ import (
 
 func main() {
 	netdev := flag.String("ifname", "", "net device to monitor")
+	interval := flag.Float64("interval", 1, "time between measurements")
 	verbose := flag.Bool("v", false, "detailed output")
 	enable_statsd := flag.Bool("statsd", false, "enable statsd reporting")
 	usage := flag.Bool("h", false, "usage information")
@@ -53,8 +54,7 @@ func main() {
 		"tx_vport_unicast_bytes",
 	}
 
-
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(time.Duration(*interval * 1e9) * time.Nanosecond)
 
 	prev, err := ethHandle.Stats(*netdev)
 	if err != nil {
