@@ -73,12 +73,20 @@ func main() {
 
 	ticker := time.NewTicker(time.Duration(*interval * 1e9) * time.Nanosecond)
 
+	prev_time := time.Now()
 	prev, err := ethHandle.Stats(*netdev)
 	if err != nil {
 		panic(err.Error())
 	}
 
-	for range ticker.C {
+	start := time.Now()
+
+	for now := range ticker.C {
+		if *verbose {
+			fmt.Printf("%9d ns, %9d ns since last\n",
+				   now.Sub(start).Nanoseconds(),
+				   now.Sub(prev_time).Nanoseconds())
+		}
 		stats, err := ethHandle.Stats(*netdev)
 		if err != nil {
 			panic(err.Error())
@@ -94,5 +102,6 @@ func main() {
 		}
 
 		prev = stats
+		prev_time = now
 	}
 }
