@@ -66,8 +66,6 @@ func main() {
 			if *verbose {
 				fmt.Printf("%s: %d\n", stat_name, stats[stat_name]-prev[stat_name])
 			}
-			if stats[stat_name] == 0 {
-				panic("zero")
 			}
 			err = c.Count(stat_name, int64(stats[stat_name])-int64(prev[stat_name]), nil, 1)
 		}
